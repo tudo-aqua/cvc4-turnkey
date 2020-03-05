@@ -56,6 +56,6 @@ for license in gpl permissive; do
       --class-path "${DOWNLOAD_PATH}"/cvc4-turnkey-${license}-b*([0-9.]).jar \
       --class-path "${DOWNLOAD_PATH}"/cvc4-turnkey-*([0-9.])-integration-tests.jar \
       --reports-dir "test-${license}-${class}" \
-      --select-class "{$class}"
+      --select-class "${class}"
   done
 done
