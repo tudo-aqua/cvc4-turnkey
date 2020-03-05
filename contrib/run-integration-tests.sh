@@ -53,7 +53,7 @@ for license in gpl permissive; do
   for class in $(jar tf "${DOWNLOAD_PATH}"/cvc4-turnkey-*([0-9.])-integration-tests.jar |
     grep -F '.class' | sed 's#/#.#g;s#.class##g'); do
     java -jar junit.jar \
-      --class-path "${DOWNLOAD_PATH}"/cvc4-turnkey-${license}-b*([0-9.]).jar \
+      --class-path "${DOWNLOAD_PATH}"/cvc4-turnkey-${license}-*([0-9.]).jar \
       --class-path "${DOWNLOAD_PATH}"/cvc4-turnkey-*([0-9.])-integration-tests.jar \
       --reports-dir "test-${license}-${class}" \
       --select-class "${class}"
