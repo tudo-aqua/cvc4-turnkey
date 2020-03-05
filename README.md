@@ -1,6 +1,6 @@
 [![Azure DevOps builds](https://img.shields.io/azure-devops/build/tudo-aqua/cvc4-turnkey/3?logo=azure-pipelines)](https://dev.azure.com/tudo-aqua/cvc4-turnkey)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.tudo-aqua/cvc4-turnkey-gpl?logo=apache-maven)](https://search.maven.org/artifact/io.github.tudo-aqua/cvc4-turnkey-gpl)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.tudo-aqua/cvc4-turnkey-permissive?logo=apache-maven)](https://search.maven.org/artifact/io.github.tudo-aqua/cvc4-turnkey-permissive)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.tudo-aqua/cvc4-turnkey-gpl?label=maven-central%20(GPL)&logo=apache-maven)](https://search.maven.org/artifact/io.github.tudo-aqua/cvc4-turnkey-gpl)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.tudo-aqua/cvc4-turnkey-permissive?label=maven-central%20(Permissive)&logo=apache-maven)](https://search.maven.org/artifact/io.github.tudo-aqua/cvc4-turnkey-permissive)
 
 ### The CVC4-TurnKey distribution
 
