@@ -1,0 +1,121 @@
+# Copyright 2019-2020 Simon Dierl <simon.dierl@cs.tu-dortmund.de>
+# SPDX-License-Identifier: ISC
+#
+# Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby
+# granted, provided that the above copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+# INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+# AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+
+trigger:
+  - master
+
+stages:
+  - stage: Build
+    displayName: 'Build master artifact on Ubuntu'
+    jobs:
+      - job: Gradle
+        displayName: 'Gradle Build'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: Gradle@2
+            inputs:
+              jdkVersionOption: '1.11'
+              jdkArchitectureOption: 'x64'
+              tasks: 'assemble integrationTestJar'
+          - publish: 'build/libs'
+
+
+  - stage: Test
+    displayName: 'Integration test on multiple platforms'
+    jobs:
+      - job: JUnit
+        variables:
+          JUnitVersion: 1.6.0
+        strategy:
+          matrix:
+            LinuxAdoptOpenJDK8:
+              VMImage: ubuntu-latest
+              JDK: adopt
+              JDKVersion: 1.8-0
+            LinuxAdoptOpenJDK11:
+              VMImage: ubuntu-latest
+              JDK: adopt
+              JDKVersion: 1.11-0
+            LinuxAdoptOpenJDK13:
+              VMImage: ubuntu-latest
+              JDK: adopt
+              JDKVersion: 1.13-0
+            LinuxOpenJDK11:
+              VMImage: ubuntu-latest
+              JDK: openjdk
+              JDKVersion: 1.11-0
+            LinuxOpenJDK13:
+              VMImage: ubuntu-latest
+              JDK: openjdk
+              JDKVersion: 1.13-0
+            LinuxZulu8:
+              VMImage: ubuntu-latest
+              JDK: zulu
+              JDKVersion: 1.8-0
+            LinuxZulu11:
+              VMImage: ubuntu-latest
+              JDK: zulu
+              JDKVersion: 1.11-0
+            LinuxZulu13:
+              VMImage: ubuntu-latest
+              JDK: zulu
+              JDKVersion: 1.13-0
+            MacOSAdoptOpenJDK8:
+              VMImage: macOS-latest
+              JDK: adopt
+              JDKVersion: 1.8-0
+            MacOSAdoptOpenJDK11:
+              VMImage: macOS-latest
+              JDK: adopt
+              JDKVersion: 1.11-0
+            MacOSAdoptOpenJDK13:
+              VMImage: macOS-latest
+              JDK: adopt
+              JDKVersion: 1.13-0
+            MacOSOpenJDK11:
+              VMImage: macOS-latest
+              JDK: openjdk
+              JDKVersion: 1.11-0
+            MacOSOpenJDK13:
+              VMImage: macOS-latest
+              JDK: openjdk
+              JDKVersion: 1.13-0
+            MacOSZulu8:
+              VMImage: macOS-latest
+              JDK: zulu
+              JDKVersion: 1.8-0
+            MacOSZulu11:
+              VMImage: macOS-latest
+              JDK: zulu
+              JDKVersion: 1.11-0
+            MacOSZulu13:
+              VMImage: macOS-latest
+              JDK: zulu
+              JDKVersion: 1.13-0
+      pool:
+          vmImage: $(VMImage)
+        steps:
+          - download: current
+          - bash: contrib/run-integration-tests.sh
+            env:
+              DOWNLOAD_PATH: $(Pipeline.Workspace)/Build.Gradle
+              JABBA_JDK: $(JDK)@$(JDKVersion)
+              JUNIT_VERSION: $(JUnitVersion)
+              OS_IMAGE: $(VMImage)
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: 'test-*/TEST-junit-jupiter.xml'
+              testRunTitle: 'Integration tests on $(VMImage) with $(JDK) $(JDKVersion)'
+              mergeTestResults: true
+              failTaskOnFailedTests: true
