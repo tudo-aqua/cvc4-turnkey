@@ -102,7 +102,7 @@ stages:
               VMImage: macOS-latest
               JDK: zulu
               JDKVersion: 1.13-0
-      pool:
+        pool:
           vmImage: $(VMImage)
         steps:
           - download: current
