@@ -243,7 +243,14 @@ cvc4LicenseVariants.forEach { license ->
     }
 }
 
-// add all generated files to source sets and create integration test source set
+
+tasks.assemble {
+    setDependsOn(cvc4LicenseVariants.flatMap { license ->
+        listOf("", "Javadoc", "Sources").map { "${license.buildName}${it}Jar" }
+    })
+}
+
+
 sourceSets {
     cvc4LicenseVariants.forEach { license ->
         create(license.buildName) {
