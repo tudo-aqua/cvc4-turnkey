@@ -46,18 +46,18 @@ stages:
               VMImage: ubuntu-latest
               JDK: adopt
               JDKVersion: 1.11-0
-            LinuxAdoptOpenJDK13:
+            LinuxAdoptOpenJDK14:
               VMImage: ubuntu-latest
               JDK: adopt
-              JDKVersion: 1.13-0
+              JDKVersion: 1.14-0
             LinuxOpenJDK11:
               VMImage: ubuntu-latest
               JDK: openjdk
               JDKVersion: 1.11-0
-            LinuxOpenJDK13:
+            LinuxOpenJDK14:
               VMImage: ubuntu-latest
               JDK: openjdk
-              JDKVersion: 1.13-0
+              JDKVersion: 1.14-0
             LinuxZulu8:
               VMImage: ubuntu-latest
               JDK: zulu
@@ -66,10 +66,10 @@ stages:
               VMImage: ubuntu-latest
               JDK: zulu
               JDKVersion: 1.11-0
-            LinuxZulu13:
+            LinuxZulu14:
               VMImage: ubuntu-latest
               JDK: zulu
-              JDKVersion: 1.13-0
+              JDKVersion: 1.14-0
             MacOSAdoptOpenJDK8:
               VMImage: macOS-latest
               JDK: adopt
@@ -78,18 +78,18 @@ stages:
               VMImage: macOS-latest
               JDK: adopt
               JDKVersion: 1.11-0
-            MacOSAdoptOpenJDK13:
+            MacOSAdoptOpenJDK14:
               VMImage: macOS-latest
               JDK: adopt
-              JDKVersion: 1.13-0
+              JDKVersion: 1.14-0
             MacOSOpenJDK11:
               VMImage: macOS-latest
               JDK: openjdk
               JDKVersion: 1.11-0
-            MacOSOpenJDK13:
+            MacOSOpenJDK14:
               VMImage: macOS-latest
               JDK: openjdk
-              JDKVersion: 1.13-0
+              JDKVersion: 1.14-0
             MacOSZulu8:
               VMImage: macOS-latest
               JDK: zulu
@@ -98,10 +98,10 @@ stages:
               VMImage: macOS-latest
               JDK: zulu
               JDKVersion: 1.11-0
-            MacOSZulu13:
+            MacOSZulu14:
               VMImage: macOS-latest
               JDK: zulu
-              JDKVersion: 1.13-0
+              JDKVersion: 1.14-0
         pool:
           vmImage: $(VMImage)
         steps:
