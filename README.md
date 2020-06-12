@@ -21,7 +21,7 @@ Java artifact that
 This project consists of two parts:
 1. a Java loader, `CVC4Loader`, that handles runtime unpacking and linking of the native support libraries, and
 2. a build system that creates a JAR from
-   [our unofficial Z3 distributions](https://github.com/tudo-aqua/cvc4-azure-build/) that
+   [our unofficial CVC4 distributions](https://github.com/tudo-aqua/cvc4-azure-build/) that
     1. contains all native support libraries built by us (at the moment, Linux and Mac OS),
     2. introduced a call to `CVC4Loader` by rewriting the generated source code, and
     3. bundles all of the required files.
