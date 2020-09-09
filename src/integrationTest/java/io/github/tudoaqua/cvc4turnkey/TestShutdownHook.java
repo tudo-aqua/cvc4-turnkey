@@ -14,7 +14,7 @@
 
 package io.github.tudoaqua.cvc4turnkey;
 
-import edu.nyu.acsys.CVC4.CVC4JNI;
+import edu.stanford.CVC4.CVC4JNI;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
