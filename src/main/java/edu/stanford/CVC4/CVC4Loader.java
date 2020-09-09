@@ -12,7 +12,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-package edu.nyu.acsys.CVC4;
+package edu.stanford.CVC4;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,7 +83,7 @@ final class CVC4Loader {
             unpackLibrary(libCVC4JNI, libCVC4JNIOut);
         } catch (IOException e) {
             throw new LinkageError("Could not unpack native libraries", e);
-        }
+            }
 
         System.load(libCVC4Out.toAbsolutePath().toString());
         System.load(libCVC4ParserOut.toAbsolutePath().toString());
