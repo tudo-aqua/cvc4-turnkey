@@ -46,7 +46,7 @@ buildscript {
 
 plugins {
     id("com.github.ben-manes.versions") version "0.33.0"
-    id("de.undercouch.download") version "4.0.4"
+    id("de.undercouch.download") version "4.1.1"
     `java-library`
     `maven-publish`
     signing
@@ -396,7 +396,7 @@ repositories {
     mavenCentral()
 }
 
-val jUnitVersion = "5.6.0"
+val jUnitVersion = "5.7.0"
 
 dependencies {
     integrationTestImplementation(group = "org.junit.jupiter", name = "junit-jupiter-api", version = jUnitVersion)

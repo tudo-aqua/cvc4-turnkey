@@ -16,7 +16,7 @@ rootProject.name = "cvc4-turnkey"
 
 
 plugins {
-    id("com.gradle.enterprise").version("3.2.1")
+    id("com.gradle.enterprise").version("3.4.1")
 }
 
 
