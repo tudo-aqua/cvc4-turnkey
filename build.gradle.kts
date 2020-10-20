@@ -12,6 +12,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.NodeList
@@ -44,6 +45,7 @@ buildscript {
 }
 
 plugins {
+    id("com.github.ben-manes.versions") version "0.33.0"
     id("de.undercouch.download") version "4.0.4"
     `java-library`
     `maven-publish`
@@ -58,12 +60,15 @@ val turnkeyVersion = ""
 version = "$cvc4Version$turnkeyVersion"
 
 
+tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+    gradleReleaseChannel="current"
+}
+
+
 java {
     sourceCompatibility = VERSION_1_8
     targetCompatibility = VERSION_1_8
 }
-
-
 
 
 /**
