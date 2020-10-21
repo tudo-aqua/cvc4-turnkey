@@ -93,7 +93,7 @@ final class CVC4Loader {
     /**
      * Supported operating systems.
      */
-    private enum OperatingSystem {
+    enum OperatingSystem {
         /**
          * Mac OS X.
          */
