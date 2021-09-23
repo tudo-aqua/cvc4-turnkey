@@ -55,6 +55,7 @@ plugins {
     id("de.undercouch.download") version "4.1.1"
     `java-library`
     `maven-publish`
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
     signing
 }
 
@@ -62,7 +63,7 @@ plugins {
 group = "io.github.tudo-aqua"
 
 val cvc4Version = "1.8"
-val turnkeyVersion = ""
+val turnkeyVersion = ".3-SNAPSHOT"
 version = "$cvc4Version$turnkeyVersion"
 
 
@@ -286,6 +287,26 @@ cvc4LicenseVariants.forEach { license ->
                 }
             }
         }
+
+        tasks.register("${license.buildName}CopyNativeBinaries${osData.buildName}") {
+            description =" Copy the CVC4 native build binaries with ${license.humanReadable} license model for" +
+                    "${osData.buildName} to the correct directory layout."
+            dependsOn("extractCVC4Binary${osData.buildName}")
+            val input = tasks.named("extractCVC4Binary${osData.buildName}").get().outputs.files.singleFile.toPath()
+            inputs.dir(input)
+
+            val output = buildDir.toPath().resolve("native-binaries-${license.buildName}")
+            outputs.dir(output)
+            doLast {
+                val binDir = input.resolve("Build.Build.${osData.buildName}")
+                        .resolve("cvc4-$cvc4Version-${osData.buildSystem}-${license.buildName}").resolve("bin")
+                copy {
+                    from(binDir.resolve("cvc4"))
+                    rename("cvc4", "cvc4-${osData.os}-${osData.architecture}")
+                    into(output)
+                }
+            }
+        }
     }
 
     tasks.register("${license.buildName}CopySources") {
@@ -361,6 +382,15 @@ cvc4LicenseVariants.forEach { license ->
         from(sourceSets[license.buildName].output.classesDirs, sourceSets[license.buildName].output.resourcesDir)
     }
 
+    tasks.register<Jar>("${license.buildName}BinariesJar") {
+        description = "Create a JAR for the cvc4 binaries of the ${license.humanReadable} license model."
+        dependsOn("${license.buildName}CopyNativeBinaries${linux.buildName}", "${license.buildName}CopyNativeBinaries${osx.buildName}")
+        archiveBaseName.set("${rootProject.name}-${license.buildName}")
+        archiveClassifier.set("binaries")
+        from(tasks.named("${license.buildName}CopyNativeBinaries${linux.buildName}").get().outputs, tasks.named("${license.buildName}CopyNativeBinaries${osx.buildName}").get().outputs)
+    }
+
+
     tasks.register<Javadoc>("${license.buildName}Javadoc") {
         description = "Create Javadoc for ${license.humanReadable} license model."
         dependsOn("${license.buildName}CopySources", "${license.buildName}RewriteCVC4JNIJava")
@@ -389,7 +419,7 @@ cvc4LicenseVariants.forEach { license ->
 
 tasks.assemble {
     setDependsOn(cvc4LicenseVariants.flatMap { license ->
-        listOf("", "Javadoc", "Sources").map { "${license.buildName}${it}Jar" }
+        listOf("", "Javadoc", "Sources", "Binaries").map { "${license.buildName}${it}Jar" }
     })
 }
 
@@ -469,7 +499,7 @@ publishing {
         cvc4LicenseVariants.forEach { license ->
             create<MavenPublication>(license.buildName) {
                 artifactId = "${project.name}-${license.buildName}"
-                listOf("", "Javadoc", "Sources").forEach {
+                listOf("", "Javadoc", "Sources", "Binaries").forEach {
                     artifact(tasks.named("${license.buildName}${it}Jar").get())
                 }
                 pom {
@@ -522,20 +552,22 @@ publishing {
             }
         }
     }
+}
+
+nexusPublishing {
+    /*
+     * To run this sucessfull, you need to configure gradle properties in ~/.gradle/gradle.properties
+     * with the username and password.
+     * We do recommend to use Maven Central API Tokens as explained here:
+     * https://blog.solidsoft.pl/2015/09/08/deploy-to-maven-central-using-api-key-aka-auth-token/
+     */
     repositories {
-        maven {
-            name = "nexusOSS"
-            val releasesUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
-            val snapshotsUrl = uri("https://oss.sonatype.org/content/repositories/snapshots/")
-            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl
-            credentials {
-                username = properties["nexusUsername"] as? String
-                password = properties["nexusPassword"] as? String
-            }
+        sonatype {
+            username.set(properties["nexusUsername"] as? String)
+            password.set(properties["nexusPassword"] as? String)
         }
     }
 }
-
 
 signing {
     isRequired = !hasProperty("skip-signing")
