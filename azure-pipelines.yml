@@ -15,12 +15,12 @@ trigger:
 
 stages:
   - stage: Build
-    displayName: 'Build master artifact on Ubuntu'
+    displayName: 'Build master artifact on OSX'
     jobs:
       - job: Gradle
         displayName: 'Gradle Build'
         pool:
-          vmImage: 'ubuntu-latest'
+          vmImage: 'macOS-latest'
         steps:
           - task: Gradle@2
             inputs:
