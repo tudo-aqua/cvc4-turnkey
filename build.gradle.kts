@@ -351,7 +351,7 @@ cvc4LicenseVariants.forEach { license ->
         outputs.dir(output)
         doLast {
             val binDir = input.resolve("Build.staticbinaries.Linux")
-                    .resolve("cvc4-$cvc4Version-Linux-${license.buildName}").resolve("bin")
+                    .resolve("cvc4-$cvc4Version-ubuntu-latest-${license.buildName}").resolve("bin")
             copy {
                 from(binDir.resolve("cvc4"))
                 rename("cvc4", "cvc4-linux-amd64")
@@ -485,7 +485,7 @@ cvc4LicenseVariants.forEach { license ->
 
     tasks.register<Jar>("${license.buildName}BinariesJar") {
         description = "Create a JAR for the cvc4 binaries of the ${license.humanReadable} license model."
-        dependsOn("${license.buildName}CopyNativeBinaries${linux.buildName}", "${license.buildName}CopyNativeBinaries${osx.buildName}", "${license.buildName}FixLinkingMacOS")
+        dependsOn("${license.buildName}CopyNativeBinariesLinux", "${license.buildName}CopyNativeBinariesMacOS", "${license.buildName}FixLinkingMacOS")
         archiveBaseName.set("${rootProject.name}-${license.buildName}")
         archiveClassifier.set("binaries")
         from(tasks.named("${license.buildName}CopyNativeBinaries${linux.buildName}").get().outputs, tasks.named("${license.buildName}CopyNativeBinaries${osx.buildName}").get().outputs)
