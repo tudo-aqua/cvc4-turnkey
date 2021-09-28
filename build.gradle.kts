@@ -33,7 +33,9 @@ import com.github.javaparser.ast.stmt.ExpressionStmt
 import com.github.javaparser.ast.stmt.IfStmt
 import de.undercouch.gradle.tasks.download.Download
 import org.gradle.api.JavaVersion.VERSION_1_8
+import org.gradle.process.internal.ExecException
 import org.paleozogt.gradle.zip.SymUnzip
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files.createDirectories
 import java.nio.file.Files.writeString
 import java.nio.file.Path
@@ -55,14 +57,16 @@ plugins {
     id("de.undercouch.download") version "4.1.1"
     `java-library`
     `maven-publish`
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
     signing
 }
 
 
 group = "io.github.tudo-aqua"
 
+val azureBuildVersion = "1.8.1"
 val cvc4Version = "1.8"
-val turnkeyVersion = ""
+val turnkeyVersion = ".3-SNAPSHOT"
 version = "$cvc4Version$turnkeyVersion"
 
 
@@ -239,12 +243,60 @@ val cvc4Package = "edu.stanford.CVC4"
 /** The relative path to the CVC4 package. */
 val cvc4PackagePath = packageToPath(cvc4Package)
 
+class ExecResult(
+        val executed: Boolean, exitValue: Int?,
+        val standardOutput: ByteArray, val standardError: ByteArray
+) {
+    val successful = executed && exitValue == 0
+}
+
+
+fun execCommand(vararg commands: String): ExecResult {
+    val stdOut = ByteArrayOutputStream()
+    val stdErr = ByteArrayOutputStream()
+    val (executed, exitValue) = try {
+        true to exec {
+            commandLine = listOf(*commands)
+            isIgnoreExitValue = true
+            standardOutput = stdOut
+            errorOutput = stdErr
+        }.exitValue
+    } catch (_: ExecException) {
+        false to null
+    }
+    return ExecResult(executed, exitValue, stdOut.toByteArray(), stdErr.toByteArray())
+}
+
+val installNameTool: String by lazy {
+    (properties["install_name_tool"] as? String)?.let { return@lazy it }
+
+    listOf("install_name_tool", "x86_64-apple-darwin-install_name_tool").forEach {
+        if (execCommand(it).executed) return@lazy it
+    }
+
+    throw GradleException("No install_name_tool defined or found on the search path")
+}
+
+tasks.register<Download>("downloadCVC4StaticBinaryLinux") {
+    description = "Download the CVC4 binary distribution for Linux."
+    src("https://github.com/tudo-aqua/cvc4-azure-build/releases/download/$azureBuildVersion/Build.staticbinaries.Linux.zip")
+    dest(buildDir.toPath().resolve("binary-archives").resolve("Build.staticbinaries.Linux.zip").toFile())
+    quiet(true)
+    overwrite(false)
+}
+
+tasks.register<SymUnzip>("extractCVC4StaticBinaryLinux") {
+    description = "Extract the static CVC4 binary distribution for Linux."
+    dependsOn("downloadCVC4StaticBinaryLinux")
+    from(tasks.named<Download>("downloadCVC4StaticBinaryLinux").get().dest)
+    into(buildDir.toPath().resolve("unpacked-static-binaries-Linux"))
+}
 
 cvc4Architectures.forEach { (arch, _) ->
     tasks.register<Download>("downloadCVC4Binary$arch") {
         description = "Download the CVC4 binary distribution for $arch."
-        src("https://github.com/tudo-aqua/cvc4-azure-build/releases/download/$cvc4Version/Build.Build.$arch.zip")
-        dest(buildDir.toPath().resolve("binary-archives").resolve("Build.Build.$arch.zip").toFile())
+        src("https://github.com/tudo-aqua/cvc4-azure-build/releases/download/$azureBuildVersion/Build.languagebindings.$arch.zip")
+        dest(buildDir.toPath().resolve("binary-archives").resolve("Build.languagebindings.$arch.zip").toFile())
         quiet(true)
         overwrite(false)
     }
@@ -272,7 +324,7 @@ cvc4LicenseVariants.forEach { license ->
             val output = buildDir.toPath().resolve("native-libraries-${license.buildName}-${osData.buildName}")
             outputs.dir(output)
             doLast {
-                val lib = input.resolve("Build.Build.${osData.buildName}")
+                val lib = input.resolve("Build.languagebindings.${osData.buildName}")
                         .resolve("cvc4-$cvc4Version-${osData.buildSystem}-${license.buildName}").resolve("lib")
                 listOf("cvc4", "cvc4parser").forEach { library ->
                     copy {
@@ -288,6 +340,76 @@ cvc4LicenseVariants.forEach { license ->
         }
     }
 
+    tasks.register("${license.buildName}CopyNativeBinariesLinux") {
+        description = "Copy the CVC4 native build binaries with ${license.humanReadable} license model for" +
+                "Linux to the correct directory layout."
+        dependsOn("extractCVC4StaticBinaryLinux")
+        val input = tasks.named("extractCVC4StaticBinaryLinux").get().outputs.files.singleFile.toPath()
+        inputs.dir(input)
+
+        val output = buildDir.toPath().resolve("native-binaries-${license.buildName}")
+        outputs.dir(output)
+        doLast {
+            val binDir = input.resolve("Build.staticbinaries.Linux")
+                    .resolve("cvc4-$cvc4Version-ubuntu-latest-${license.buildName}").resolve("bin")
+            copy {
+                from(binDir.resolve("cvc4"))
+                rename("cvc4", "cvc4-linux-amd64")
+                into(output)
+            }
+        }
+    }
+
+    tasks.register("${license.buildName}CopyNativeBinariesMacOS") {
+        description = "Copy the CVC4 native build binaries with ${license.humanReadable} license model for" +
+                "MacOS to the correct directory layout."
+        dependsOn("extractCVC4BinaryMacOS")
+        val input = tasks.named("extractCVC4BinaryMacOS").get().outputs.files.singleFile.toPath()
+        inputs.dir(input)
+
+        val output = buildDir.toPath().resolve("native-binaries-${license.buildName}")
+        outputs.dir(output)
+        doLast {
+            val binDir = input.resolve("Build.languagebindings.MacOS")
+                    .resolve("cvc4-$cvc4Version-macOS-latest-${license.buildName}").resolve("bin")
+            val libDir = input.resolve("Build.languagebindings.MacOS")
+                    .resolve("cvc4-$cvc4Version-macOS-latest-${license.buildName}").resolve("lib")
+            copy {
+                from(binDir.resolve("cvc4"))
+                rename("cvc4", "cvc4-osx-amd64")
+                into(output)
+            }
+            copy {
+                from(libDir)
+                include("*.dylib")
+                into(output)
+            }
+        }
+    }
+
+    tasks.register("${license.buildName}FixLinkingMacOS") {
+        description = "It is requried to change the way, the cvc4 binary looksup the dylibs on MacOS."
+        dependsOn("${license.buildName}CopyNativeBinariesMacOS")
+        val binary = buildDir.toPath().resolve("native-binaries-${license.buildName}").resolve("cvc4-osx-amd64").toAbsolutePath().toString()
+        doLast{
+            exec {
+                commandLine = listOf(
+                        installNameTool,
+                        "-change", "@rpath/libcvc4.7.dylib", "@executable_path/libcvc4.7.dylib",
+                        binary
+                )
+            }
+            exec {
+                commandLine = listOf(
+                        installNameTool,
+                        "-change", "@rpath/libcvc4parser.7.dylib", "@executable_path/libcvc4parser.7.dylib",
+                        binary
+                )
+            }
+        }
+    }
+
+
     tasks.register("${license.buildName}CopySources") {
         description =
                 "Copy the CVC4 Java sources with ${license.humanReadable} license model to the correct directory " +
@@ -295,7 +417,7 @@ cvc4LicenseVariants.forEach { license ->
         dependsOn("extractCVC4Binary${linux.buildName}")
 
         val linuxSourceDir = tasks.named<SymUnzip>("extractCVC4Binary${linux.buildName}").get().destinationDir.toPath()
-                .resolve("Build.Build.${linux.buildName}")
+                .resolve("Build.languagebindings.${linux.buildName}")
                 .resolve("cvc4-$cvc4Version-${linux.buildSystem}-${license.buildName}")
         val output = buildDir.toPath().resolve("swig-sources-${license.buildName}")
 
@@ -318,10 +440,10 @@ cvc4LicenseVariants.forEach { license ->
         dependsOn("extractCVC4Binary${linux.buildName}", "extractCVC4Binary${osx.buildName}")
 
         val linuxSourceDir = tasks.named<SymUnzip>("extractCVC4Binary${linux.buildName}").get().destinationDir.toPath()
-                .resolve("Build.Build.${linux.buildName}")
+                .resolve("Build.languagebindings.${linux.buildName}")
                 .resolve("cvc4-$cvc4Version-${linux.buildSystem}-${license.buildName}")
         val osxSourceDir = tasks.named<SymUnzip>("extractCVC4Binary${osx.buildName}").get().destinationDir.toPath()
-                .resolve("Build.Build.${osx.buildName}")
+                .resolve("Build.languagebindings.${osx.buildName}")
                 .resolve("cvc4-$cvc4Version-${osx.buildSystem}-${license.buildName}")
         val output = buildDir.toPath().resolve("rewritten-cvc4jni-${license.buildName}")
 
@@ -361,6 +483,15 @@ cvc4LicenseVariants.forEach { license ->
         from(sourceSets[license.buildName].output.classesDirs, sourceSets[license.buildName].output.resourcesDir)
     }
 
+    tasks.register<Jar>("${license.buildName}BinariesJar") {
+        description = "Create a JAR for the cvc4 binaries of the ${license.humanReadable} license model."
+        dependsOn("${license.buildName}CopyNativeBinariesLinux", "${license.buildName}CopyNativeBinariesMacOS", "${license.buildName}FixLinkingMacOS")
+        archiveBaseName.set("${rootProject.name}-${license.buildName}")
+        archiveClassifier.set("binaries")
+        from(tasks.named("${license.buildName}CopyNativeBinaries${linux.buildName}").get().outputs, tasks.named("${license.buildName}CopyNativeBinaries${osx.buildName}").get().outputs)
+    }
+
+
     tasks.register<Javadoc>("${license.buildName}Javadoc") {
         description = "Create Javadoc for ${license.humanReadable} license model."
         dependsOn("${license.buildName}CopySources", "${license.buildName}RewriteCVC4JNIJava")
@@ -389,7 +520,7 @@ cvc4LicenseVariants.forEach { license ->
 
 tasks.assemble {
     setDependsOn(cvc4LicenseVariants.flatMap { license ->
-        listOf("", "Javadoc", "Sources").map { "${license.buildName}${it}Jar" }
+        listOf("", "Javadoc", "Sources", "Binaries").map { "${license.buildName}${it}Jar" }
     })
 }
 
@@ -469,7 +600,7 @@ publishing {
         cvc4LicenseVariants.forEach { license ->
             create<MavenPublication>(license.buildName) {
                 artifactId = "${project.name}-${license.buildName}"
-                listOf("", "Javadoc", "Sources").forEach {
+                listOf("", "Javadoc", "Sources", "Binaries").forEach {
                     artifact(tasks.named("${license.buildName}${it}Jar").get())
                 }
                 pom {
@@ -522,20 +653,22 @@ publishing {
             }
         }
     }
+}
+
+nexusPublishing {
+    /*
+     * To run this sucessfull, you need to configure gradle properties in ~/.gradle/gradle.properties
+     * with the username and password.
+     * We do recommend to use Maven Central API Tokens as explained here:
+     * https://blog.solidsoft.pl/2015/09/08/deploy-to-maven-central-using-api-key-aka-auth-token/
+     */
     repositories {
-        maven {
-            name = "nexusOSS"
-            val releasesUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
-            val snapshotsUrl = uri("https://oss.sonatype.org/content/repositories/snapshots/")
-            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl
-            credentials {
-                username = properties["nexusUsername"] as? String
-                password = properties["nexusPassword"] as? String
-            }
+        sonatype {
+            username.set(properties["nexusUsername"] as? String)
+            password.set(properties["nexusPassword"] as? String)
         }
     }
 }
-
 
 signing {
     isRequired = !hasProperty("skip-signing")
